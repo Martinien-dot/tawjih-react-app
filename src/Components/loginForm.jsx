@@ -1,49 +1,117 @@
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../mes composants/Slices/authSlice";
 
 const LoginForm = () => {
   const dispatch = useDispatch();
-  const [email, setEmail] = useState();
-  const [password, setPassword] = useState();
-
+  const navigate = useNavigate();
+  
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const naviget = useNavigate();
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  // Récupérer l'état d'authentification depuis Redux
+  const { isAuthenticated, error: authError } = useSelector((state) => state.auth);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation des champs
+    if (!email || !password) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
     setLoading(true);
-    const log_info = {
-      email: email,
-      password : password
+    setError("");
+
+    const loginData = {
+      email,
+      password
     };
 
-    dispatch(loginUser(log_info))
-
-    naviget("/react-templates/edumim/account");    
-    
-
+    try {
+      // Dispatch l'action et attendre le résultat
+      const resultAction = await dispatch(loginUser(loginData));
+      
+      // Vérifier si l'action a réussi
+      if (loginUser.fulfilled.match(resultAction)) {
+        // Login réussi - naviguer vers la page suivante
+        navigate("/react-templates/edumim/account");
+      } else {
+        // Login échoué - afficher l'erreur
+        setError(authError || "Identifiants invalides");
+      }
+    } catch (error) {
+      setError("Une erreur est survenue lors de la connexion");
+      console.error("Erreur de connexion:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
-    <form onSubmit={handleSubmit} className=" md:grid-cols-2 grid grid-cols-1 gap-[30px] mt-6 ">
-   
-      <div className="md:col-span-2 col-span-1">
-        <label htmlFor="email">Email</label>
-        <input type="email" className="from-control" placeholder="nom_prenom@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)}/>
-      </div>
-      <div className="md:col-span-2 col-span-1">
-      <label htmlFor="password">mot de passe</label>
-        <input type="password" className="from-control" placeholder="..........." value={password} onChange={(e) => setPassword(e.target.value)}/>
-      </div>
-      <div class="mt-6 text-center">
-            <p class="text-sm text-gray-600">
-                Vous n'avez pas de compte ? 
-                <Link to="/react-templates/edumim/inscription" class="font-medium text-indigo-600 hover:text-indigo-500">S'inscrire</Link>
-            </p>
+    <form onSubmit={handleSubmit} className="md:grid-cols-2 grid grid-cols-1 gap-[30px] mt-6">
+      
+      {/* Affichage des erreurs */}
+      {error && (
+        <div className="md:col-span-2 col-span-1 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
         </div>
-      <button class="btn btn-primary mt-[10px]" type="submit" name="submit">
-        {loading ? 'Connexion ...' : 'Connexion'}
+      )}
+
+      <div className="md:col-span-2 col-span-1">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          Email
+        </label>
+        <input 
+          type="email" 
+          id="email"
+          className="form-control mt-1 block w-full" 
+          placeholder="votre_mail@gmail.com" 
+          value={email} 
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </div>
+
+      <div className="md:col-span-2 col-span-1">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          Mot de passe
+        </label>
+        <input 
+          type="password" 
+          id="password"
+          className="form-control mt-1 block w-full" 
+          placeholder="..........." 
+          value={password} 
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </div>
+
+      <div className="md:col-span-2 col-span-1 mt-6 text-center">
+        <p className="text-sm text-gray-600">
+          Vous n'avez pas de compte ? 
+          <Link 
+            to="/react-templates/edumim/inscription" 
+            className="font-medium text-indigo-600 hover:text-indigo-500 ml-1"
+          >
+            S'inscrire
+          </Link>
+        </p>
+      </div>
+
+      <button 
+        className="btn btn-primary mt-[10px] md:col-span-2 col-span-1" 
+        type="submit" 
+        disabled={loading}
+      >
+        {loading ? 'Connexion en cours...' : 'Connexion'}
       </button>
     </form>
   );
